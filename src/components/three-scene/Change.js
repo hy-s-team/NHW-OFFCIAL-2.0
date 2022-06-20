@@ -1,4 +1,3 @@
-import { objectExpression } from "@babel/types";
 import { Utils } from "run-scene-v2";
 // 声明变量
 let camera, scene, controls, renderer2, renderer, dom, t, p, runScene;
@@ -40,6 +39,8 @@ function Change(runScene) {
   });
 
   runScene.on("complete", () => {
+    controls.maxPolarAngle = Math.PI / 2;
+    controls.screenSpacePanning = false;
     this.shopEvent.init();
     this.towerEvent.init();
     this.shopEvent.createGoldBorder();
@@ -49,62 +50,6 @@ function Change(runScene) {
   this.dispose = () => runScene.dispose();
 }
 
-// runScene.modelEx.clone('model')
-// t.runScene.modelEx.clone()
-
-// 基本事件
-class Events {
-  constructor() {
-    controls.addEventListener("start", this.controlStart);
-    t.runScene.optionsEx.cb.events.pointer.down.add(
-      "pointerDown",
-      this.mouseDown
-    );
-    t.runScene.optionsEx.cb.events.pointer.up.add("pointerUp", this.mouseUp);
-    t.runScene.optionsEx.cb.events.mouse.move.add("mouseMove", () => {});
-  }
-
-  downPosition = { x: 0, y: 0 };
-
-  closeAnimaAtStart = {};
-
-  mouseDown = (event) => {
-    this.downPosition = {
-      x: event.offsetX,
-      y: event.offsetY,
-    };
-  };
-
-  mouseUp = (event) => {
-    if (event.button === 2) return;
-    const ux = event.offsetX;
-    const uy = event.offsetY;
-    const { x, y } = this.downPosition;
-    // 当点击的位置和点击后的位置一致时就会触发
-    ux === x && uy === y && this.triggerClick(event);
-  };
-
-  triggerClick = (e) => {
-    const model = t.runScene.modelEx.select;
-    if (!model) return;
-  };
-
-  controlStart = () => {};
-
-  closeAnmia() {
-    Object.values(this.closeAnimaAtStart).map(
-      (item) =>
-        // 暂停动画 并清空内容 item就是那个动画
-        item && item.kill()
-    );
-  }
-
-  dispose() {
-    dom.removeEventListener("pointerdown", this.mouseDown);
-    dom.removeEventListener("pointerup", this.mouseUp);
-    controls.removeEventListener("start", this.controlStart);
-  }
-}
 //方法
 class Methods {
   //获取模型
@@ -133,9 +78,10 @@ class Methods {
     t.runScene.modelEx.setGlow(model, isOpen);
   }
 }
+
 //克隆事件
 class CloneEvent {
-  constructor() {}
+  constructor() { }
   //克隆模型
   copyModel(model) {
     const copyModel = t.runScene.modelEx.clone(model);
@@ -159,6 +105,7 @@ class CloneEvent {
     t.runScene.modelEx.remove(copyModel);
   }
 }
+
 //商铺事件
 class ShopEvent {
   constructor() {
@@ -302,21 +249,22 @@ class ShopEvent {
     });
   }
 }
+
 //塔事件
 class TowerEvent {
-  constructor() {}
+  constructor() { }
   cloneModel;
-  peopleMap = [];
-  lightMap={};
+  peopleArray = [];
+  lightMap = {};
   init() {
     this.cloneModel = t.methods.getModel("ren_0");
     this.lightMap = {
-      "1楼":t.methods.getModel('TaLight_1F'),
-      "2楼":t.methods.getModel('TaLight_2F'),
-      "3楼":t.methods.getModel('TaLight_3F'),
-      "4楼":t.methods.getModel('TaLight_4F'),
-      "5楼":t.methods.getModel('TaLight_5F'),
-      顶楼:t.methods.getModel('Ding'),
+      "1楼": t.methods.getModel('TaLight_1F'),
+      "2楼": t.methods.getModel('TaLight_2F'),
+      "3楼": t.methods.getModel('TaLight_3F'),
+      "4楼": t.methods.getModel('TaLight_4F'),
+      "5楼": t.methods.getModel('TaLight_5F'),
+      顶楼: t.methods.getModel('Ding'),
     }
   }
   //人异步出现
@@ -343,7 +291,7 @@ class TowerEvent {
         opacity: 0,
       });
       copyPerson.lookAt(581.4321928755762, 0, -702.6268867583516);
-      this.peopleMap.push(copyPerson);
+      this.peopleArray.push(copyPerson);
       Utils.anima(
         {
           opc: 0,
@@ -391,19 +339,74 @@ class TowerEvent {
   }
   //人消失
   async peopleDisapper(num) {
-    if (num >= this.peopleMap.length) num = this.peopleMap.length;
+    if (num >= this.peopleArray.length) num = this.peopleArray.length;
     if (num == 0) return;
     for (let i = 0; i < num; i++) {
-      await this.asyncDisapper(this.peopleMap[0]);
-      this.peopleMap.splice(0, 1);
-      console.log(this.peopleMap);
+      await this.asyncDisapper(this.peopleArray[0]);
+      this.peopleArray.splice(0, 1);
     }
   }
   //灯开启关闭
-  lightControl(floor,isOpen){
+  lightControl(floor, isOpen) {
     this.lightMap[floor].visible = isOpen
   }
 }
+
+// 基本事件
+class Events {
+  constructor() {
+    controls.addEventListener("start", this.controlStart);
+    t.runScene.optionsEx.cb.events.pointer.down.add(
+      "pointerDown",
+      this.mouseDown
+    );
+    t.runScene.optionsEx.cb.events.pointer.up.add("pointerUp", this.mouseUp);
+    t.runScene.optionsEx.cb.events.mouse.move.add("mouseMove", () => { });
+  }
+
+  downPosition = { x: 0, y: 0 };
+
+  closeAnimaAtStart = {};
+
+  mouseDown = (event) => {
+    this.downPosition = {
+      x: event.offsetX,
+      y: event.offsetY,
+    };
+  };
+
+  mouseUp = (event) => {
+    if (event.button === 2) return;
+    const ux = event.offsetX;
+    const uy = event.offsetY;
+    const { x, y } = this.downPosition;
+    // 当点击的位置和点击后的位置一致时就会触发
+    ux === x && uy === y && this.triggerClick(event);
+  };
+
+  triggerClick = (e) => {
+    const model = t.runScene.modelEx.select;
+    if (!model) return;
+  };
+
+  controlStart = () => { };
+
+  closeAnmia() {
+    Object.values(this.closeAnimaAtStart).map(
+      (item) =>
+        // 暂停动画 并清空内容 item就是那个动画
+        item && item.kill()
+    );
+  }
+
+  dispose() {
+    dom.removeEventListener("pointerdown", this.mouseDown);
+    dom.removeEventListener("pointerup", this.mouseUp);
+    controls.removeEventListener("start", this.controlStart);
+  }
+}
+
+
 export default Change;
 
 // runScene.anima.play('Test 001')
@@ -413,3 +416,8 @@ export default Change;
 // runScene.anima.pauseAll()
 
 //581.4321928755762 0 -702.6268867583516
+
+
+// runScene.modelEx.clone('model')
+// t.runScene.modelEx.clone()
+
