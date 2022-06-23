@@ -1,4 +1,6 @@
 import { Utils } from "run-scene-v2";
+import * as THREE from "three";
+const { getRes, getMacro } = Utils;
 // 声明变量
 let camera, scene, controls, renderer2, renderer, dom, t, p, runScene;
 
@@ -24,26 +26,46 @@ function Change(runScene) {
 
   // 挂载runScene
   t.runScene = runScene;
+
   this.events = new Events();
+
   this.methods = new Methods();
+
   this.cloneEvent = new CloneEvent();
+
   this.shopEvent = new ShopEvent();
+
   this.towerEvent = new TowerEvent();
+
+  this.flower = new Flower();
+
+  // 基本的场景配置
+  controls.maxPolarAngle = Math.PI / 2 - 0.2;
+
+  controls.screenSpacePanning = false;
+
   // 加载结束
   runScene.on("lazyLoadedTexture", () => {
     // 初始化解析数据添加模型
     // this.resolveJson.init();
-
-    // 基本的场景配置
-    controls.maxPolarAngle = Math.PI / 2;
   });
 
-  runScene.on("complete", () => {
-    controls.maxPolarAngle = Math.PI / 2;
-    controls.screenSpacePanning = false;
+  runScene.on("complete", async () => {
+    await this.flower.init();
+
     this.shopEvent.init();
+
     this.towerEvent.init();
+
     this.shopEvent.createGoldBorder();
+
+    setTimeout(() => {
+      // runScene.bloom.glow.bloomParams.isBloom = false;
+    }, 1000);
+
+    t.runScene.cb.render.add("flowerRotate", () => {
+      t.flower.flower && (t.flower.flower.rotation.y += 0.01);
+    });
   });
 
   // 销毁
@@ -108,9 +130,7 @@ class CloneEvent {
 
 //商铺事件
 class ShopEvent {
-  constructor() {
-    console.log(Utils, "Utils");
-  }
+  constructor() { }
   shopMap;
   cloneModel;
   //初始化
@@ -259,13 +279,13 @@ class TowerEvent {
   init() {
     this.cloneModel = t.methods.getModel("ren_0");
     this.lightMap = {
-      "1楼": t.methods.getModel('TaLight_1F'),
-      "2楼": t.methods.getModel('TaLight_2F'),
-      "3楼": t.methods.getModel('TaLight_3F'),
-      "4楼": t.methods.getModel('TaLight_4F'),
-      "5楼": t.methods.getModel('TaLight_5F'),
-      顶楼: t.methods.getModel('Ding'),
-    }
+      "1楼": t.methods.getModel("TaLight_1F"),
+      "2楼": t.methods.getModel("TaLight_2F"),
+      "3楼": t.methods.getModel("TaLight_3F"),
+      "4楼": t.methods.getModel("TaLight_4F"),
+      "5楼": t.methods.getModel("TaLight_5F"),
+      顶楼: t.methods.getModel("Ding"),
+    };
   }
   //人异步出现
   asyncApper() {
@@ -348,7 +368,105 @@ class TowerEvent {
   }
   //灯开启关闭
   lightControl(floor, isOpen) {
-    this.lightMap[floor].visible = isOpen
+    this.lightMap[floor].visible = isOpen;
+  }
+}
+
+// 582.1630877495076
+// 318.1238684195186
+// -742.0680735984594
+
+// 莲花(骨骼动画) lotus---荷花
+class Flower {
+  // glb加载器
+  glbLoader = t.runScene.loaderer.gltf;
+  // fbx加载器
+  fbxLoader = t.runScene.fileEx;
+  // 莲花
+  flower = null;
+
+  async init() {
+    const { material } = await this.loadGlb();
+    const flower = await this.loadFbx("./assets/flowerAnima.fbx", material);
+    t.runScene.modelEx.add(flower);
+    this.flower = flower;
+    this.flower.visible = false;
+    this.flower.position.set(
+      582.1630877495076,
+      318.1238684195186,
+      -742.0680735984594
+    );
+  }
+
+  _loadGlb(models) {
+    if (models.length === 1) return models[0];
+    const group = new THREE.Group();
+    group.add(...models);
+    return group;
+  }
+
+  async loadGlb() {
+    const models = await this.glbLoader.load(`./assets/flowerMaterial.glb`, {
+      addToScene: false,
+      triggerCb: false,
+    });
+    const model = this._loadGlb(models);
+    model.name = `莲花材质`;
+    return model;
+  }
+
+  async loadFbx(url, material) {
+    const res = this.fbxLoader.parses.fbx.parse(await getRes(url), "");
+    res.traverse((m) => {
+      t.runScene.modelEx.setGlow(m, true);
+      if (m.material) {
+        m.material = t.runScene.materialEx.create();
+        m.material = material.clone();
+        m.material.needsUpdate = true;
+        m.material.transparent = true;
+        m.material.opacity = 0;
+      }
+    });
+    return t.runScene.sceneEx.cleanUnlessLevel(res);
+  }
+
+  async show(isShow, cb) {
+    // t.events.showAnima({
+    //   model: this.flower,
+    //   isShow,
+    //   time: 4,
+    // });
+    // t.runScene.anima.play("Take 001");
+    // await new Promise((s) => setTimeout(s, 6000));
+    // const anima = t.runScene.anima.map["Take 001"];
+    // t.runScene.anima.playings.delete(anima);
+    // await new Promise((s) => setTimeout(s, 2000));
+    // t.events.showAnima({
+    //   model: this.flower,
+    //   isShow: false,
+    //   time: 2,
+    //   cb: cb
+    // });
+
+
+    t.events.showAnima({
+      model: this.flower,
+      isShow,
+      time: 4,
+    });
+    t.runScene.anima.play("Take 001", {
+      // loop: false,
+      // lastFrame: false,
+      onFinished() {
+        t.events.showAnima({
+          model: t.flower.flower,
+          isShow: false,
+          time: 2,
+          cb: cb
+        });
+      },
+    });
+
   }
 }
 
@@ -364,8 +482,24 @@ class Events {
     t.runScene.optionsEx.cb.events.mouse.move.add("mouseMove", () => { });
   }
 
-  downPosition = { x: 0, y: 0 };
+  showAnima(info) {
+    const { model, isShow, time, cb } = info;
+    if (isShow) model.visible = isShow;
+    const models = []
+    model.traverse((m) => {
+      if (m.type === 'Group') return
+      m.material.transparent = true;
+      models.push(m)
+    })
+    Utils.anima({ opc: isShow ? 0 : 1 }, { opc: isShow ? 1 : 0 }, time, (data) => {
+      models.map((m) => m.material.opacity = data.opc)
+    }, () => {
+      if (!isShow) model.visible = isShow;
+      cb && cb()
+    })
+  }
 
+  downPosition = { x: 0, y: 0 };
   closeAnimaAtStart = {};
 
   mouseDown = (event) => {
@@ -406,7 +540,6 @@ class Events {
   }
 }
 
-
 export default Change;
 
 // runScene.anima.play('Test 001')
@@ -417,7 +550,5 @@ export default Change;
 
 //581.4321928755762 0 -702.6268867583516
 
-
 // runScene.modelEx.clone('model')
 // t.runScene.modelEx.clone()
-

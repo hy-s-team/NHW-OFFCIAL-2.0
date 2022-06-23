@@ -1,25 +1,45 @@
 <template>
   <div class="three-scene" ref="three-scene" onselectstart="return false;">
-    <div class="oth">
-      <input type="number" v-model="peoPleNumber" />
-      <button v-for="(item, index) in shopList" @pointerdown="shopPeople(item)">
-        {{ item }}人出现
-      </button>
-      <input type="number" v-model="towerPeopleNumber" />
-      <button @pointerdown="towerPeopleApper">塔人物出现</button>
-      <button @pointerdown="towerPeopleDisapper">塔人物消失</button>
-      <button v-for="(item, index) in lightList" @pointerdown="lightOpen(item)">
-        {{ item }}开灯
-      </button>
-      <button v-for="(item, index) in lightList" @pointerdown="lightClose(item)">
-        {{ item }}关灯
-      </button>
-    </div>
     <div
-      class="goldBorder"
-      v-for="(border, index) in shopList"
-      :class="`${border}金币`"
+      @pointerdown="
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      "
+      class="btn"
     >
+      <div class="oth">
+        <input type="number" v-model="peoPleNumber" />
+        <button
+          v-for="(item, index) in shopList"
+          @pointerdown="shopPeople(item)"
+        >
+          {{ item }}人出现
+        </button>
+        <input type="number" v-model="towerPeopleNumber" />
+        <button @pointerdown="towerPeopleApper">塔人物出现</button>
+        <button @pointerdown="towerPeopleDisapper">塔人物消失</button>
+        <button
+          v-for="(item, index) in lightList"
+          @pointerdown="lightOpen(item)"
+        >
+          {{ item }}开灯
+        </button>
+        <button
+          v-for="(item, index) in lightList"
+          @pointerdown="lightClose(item)"
+        >
+          {{ item }}关灯
+        </button>
+
+        <button @click="flowerAnima">莲花动画</button>
+      </div>
+      <div
+        class="goldBorder"
+        v-for="(border, index) in shopList"
+        :class="`${border}金币`"
+      ></div>
     </div>
   </div>
 </template>
@@ -56,6 +76,9 @@ export default {
         options: {
           render2: true,
           render3: true,
+          texture: {
+            load: false,
+          },
           /**
             msg?: {
             是否显示打印，默认显示
@@ -97,10 +120,23 @@ export default {
         this.onDone();
       });
       this.change = new Change(this.runScene);
-      this.runScene;
+      console.log(this.runScene, "this.runScene");
     },
+
     onDone() {
+      console.log(
+        this.runScene.cb.render.add("test", () => {}),
+        "this.runScene"
+      );
       console.log("场景加载结束~");
+    },
+    // 莲花动画
+    flowerAnima() {
+      // 结束回调
+      const cb = () => {
+        console.log("全部加载结束");
+      };
+      this.change.flower.show(true, cb);
     },
     // 打印点击到的模型
     logClickModel(model) {
